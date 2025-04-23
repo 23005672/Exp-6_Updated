@@ -26,18 +26,48 @@ contract PasswordlessAuth {
     event UserRegistered(address user);
     event UserAuthenticated(address user);
 
+    // Register the user
     function registerUser() public {
         require(!registeredUsers[msg.sender], "Already registered");
         registeredUsers[msg.sender] = true;
         emit UserRegistered(msg.sender);
     }
 
-    function authenticate(bytes32 hash, uint8 v, bytes32 r, bytes32 s) public view returns (bool) {
+    // Authenticate function that checks if the signed message is from the registered user
+    function authenticate(string memory message, uint8 v, bytes32 r, bytes32 s) public view returns (bool) {
         require(registeredUsers[msg.sender], "User not registered");
-        address signer = ecrecover(hash, v, r, s);
+
+        // Hash the message with the Ethereum prefix
+        bytes32 messageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n", uint2str(bytes(message).length), message));
+
+        // Recover the signer from the signature (v, r, s)
+        address signer = ecrecover(messageHash, v, r, s);
+
+        // Check if the signer is the same as the msg.sender (who's trying to authenticate)
         return signer == msg.sender;
     }
+
+    // Helper function to convert uint to string
+    function uint2str(uint _i) internal pure returns (string memory _uintAsString) {
+        if (_i == 0) {
+            return "0";
+        }
+        uint j = _i;
+        uint len;
+        while (j != 0) {
+            len++;
+            j /= 10;
+        }
+        bytes memory bstr = new bytes(len);
+        uint k = len - 1;
+        while (_i != 0) {
+            bstr[k--] = bytes1(uint8(48 + _i % 10)); // Use bytes1 instead of byte
+            _i /= 10;
+        }
+        return string(bstr);
+    }
 }
+
 ```
 
 # Expected Output:
